@@ -1,5 +1,5 @@
-import torch 
-import torch.nn as nn 
+import torch
+import torch.nn as nn
 
 
 class VAE(nn.Module):
@@ -11,7 +11,7 @@ class VAE(nn.Module):
         self.trunk_dim = trunk_dim
         self.latent_dim = latent_dim
 
-        # define my layers 
+        # define my layers
         self.fc_encoder_trunk = nn.Linear(in_dim, 400)
         self.fc_mu = nn.Linear(400, latent_dim)
         self.fc_logvar = nn.Linear(400, latent_dim)
@@ -21,7 +21,7 @@ class VAE(nn.Module):
 
     def encode(self, x):
 
-        # shared trunk, two heads 
+        # shared trunk, two heads
         x = self.relu(self.fc_encoder_trunk(x))
         mu = self.fc_mu(x)
         logvar = self.fc_logvar(x)
@@ -31,16 +31,16 @@ class VAE(nn.Module):
 
     def reparameterize(self, mu, logvar):
 
-        # rewrite sample as a determinstic function of mu and logvar 
+        # rewrite sample as a determinstic function of mu and logvar
         sigma = torch.exp(0.5 * logvar)
         eps = torch.randn(logvar.shape,device=sigma.device)
         z = mu + sigma * eps
 
-        return z 
+        return z
 
     def decode(self, z):
 
-        # take z, reconstruct original dimensions 
+        # take z, reconstruct original dimensions
         h = self.relu(self.fc_decoder_hidden(z))
         out = torch.sigmoid(self.fc_decoder_out(h))
 

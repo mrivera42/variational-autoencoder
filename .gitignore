@@ -12,6 +12,8 @@ wheels/
 # Data and experiment artifacts
 data/
 wandb/
+checkpoints/
+figures/
 
 # Personal notes
 LITERATURE_REVIEW.md
