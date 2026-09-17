@@ -105,13 +105,17 @@ class GaussianDiffusion:
 
     # ---- reverse process p(x_{t-1} | x_t) ----------------------------------
     @torch.no_grad()
-    def p_sample(self, model, x_t, t):
+    def p_sample(self, model, x_t, t, add_noise=True):
         """One reverse denoising step: given x_t, sample x_{t-1}.
 
         t : LongTensor [B] (same value across the batch during sampling).
 
         mean = sqrt_recip_alpha_t * (x_t - beta_t / sqrt(1 - alpha_bar_t) * eps_pred)
         Add noise sqrt(posterior_variance_t) * z (z ~ N(0, I)), except at t == 0.
+
+        add_noise : if False, drop the `sigma_t * z` term so the reverse step is
+        deterministic (the mean only). This is the "comment out the noise
+        addition" experiment — set False to see what generation produces without it.
         """
         # SCAFFOLD
         eps_pred = model(x_t, t)
@@ -123,16 +127,20 @@ class GaussianDiffusion:
 
         if (t == 0).all():
             return mean
+        if not add_noise:                 # experiment: noise-injection term removed
+            return mean
         var_t = _extract(self.posterior_variance, t, x_t.shape)
         noise = torch.randn_like(x_t)
         return mean + torch.sqrt(var_t) * noise
 
     @torch.no_grad()
-    def sample(self, model, shape, progress=False):
+    def sample(self, model, shape, progress=False, add_noise=True):
         """Full ancestral sampling loop: x_T ~ N(0, I) -> ... -> x_0.
 
         shape : desired output shape, e.g. (n, 1, 28, 28) or (n, latent_dim).
         progress : show a tqdm bar over the reverse steps (sampling is slow).
+        add_noise : passed to p_sample; set False to remove the noise-injection
+        term from every reverse step (the "comment out the noise" experiment).
         Returns the final x_0.
         """
         # SCAFFOLD
@@ -143,5 +151,5 @@ class GaussianDiffusion:
             steps = tqdm(steps, total=self.num_timesteps, desc="sampling", leave=False)
         for step in steps:
             t = torch.full((shape[0],), step, device=self.device, dtype=torch.long)
-            x = self.p_sample(model, x, t)
+            x = self.p_sample(model, x, t, add_noise=add_noise)
         return x
